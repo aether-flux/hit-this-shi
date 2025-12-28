@@ -46,6 +46,7 @@ async fn special_quote(headers: HeaderMap, ConnectInfo(addr): ConnectInfo<Socket
     let idx = (hash % lines.len() as u64) as usize;
     let quote = lines[idx];
 
+// <<<<<<< HEAD
     let html = format!(r#"<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -117,6 +118,14 @@ async fn special_quote(headers: HeaderMap, ConnectInfo(addr): ConnectInfo<Socket
 </html>"#, quote);
 
     Html(html)
+// =======
+//     // return plain text
+//     (
+//         StatusCode::OK,
+//         [("Content-Type", "text/plain; charset=utf-8")],
+//         response,
+//     )
+// >>>>>>> ec7a17a (feat: trying docker setup)
 }
 
 #[tokio::main]
