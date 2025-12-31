@@ -1,6 +1,9 @@
-use std::{hash::{DefaultHasher, Hash, Hasher}, net::SocketAddr};
+use std::{collections::VecDeque, hash::{DefaultHasher, Hash, Hasher}, net::SocketAddr, sync::Mutex};
 
 use axum::{extract::ConnectInfo, http::{HeaderMap}, response::{Html, IntoResponse}, routing::get, Router};
+use once_cell::sync::Lazy;
+
+static RECENT_QUOTES: Lazy<Mutex<VecDeque<usize>>> = Lazy::new(|| Mutex::new(VecDeque::with_capacity(10)));
 
 async fn special_quote(headers: HeaderMap, ConnectInfo(addr): ConnectInfo<SocketAddr>) -> impl IntoResponse {
     let lines: Vec<&'static str> = vec![
@@ -43,10 +46,25 @@ async fn special_quote(headers: HeaderMap, ConnectInfo(addr): ConnectInfo<Socket
     fingerprint.hash(&mut hasher);
     let hash = hasher.finish();
 
-    let idx = (hash % lines.len() as u64) as usize;
+    let mut idx = (hash % lines.len() as u64) as usize;
+    let mut recent = RECENT_QUOTES.lock().unwrap();
+
+    let start_idx = idx;
+    while recent.contains(&idx) {
+        idx = (idx + 1) % lines.len();
+
+        if idx == start_idx {
+            break;
+        }
+    }
+
+    recent.push_back(idx);
+    if recent.len() > 10 {
+        recent.pop_front();
+    }
+
     let quote = lines[idx];
 
-// <<<<<<< HEAD
     let html = format!(r#"<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -118,14 +136,6 @@ async fn special_quote(headers: HeaderMap, ConnectInfo(addr): ConnectInfo<Socket
 </html>"#, quote);
 
     Html(html)
-// =======
-//     // return plain text
-//     (
-//         StatusCode::OK,
-//         [("Content-Type", "text/plain; charset=utf-8")],
-//         response,
-//     )
-// >>>>>>> ec7a17a (feat: trying docker setup)
 }
 
 #[tokio::main]
