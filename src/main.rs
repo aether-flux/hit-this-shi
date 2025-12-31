@@ -46,22 +46,22 @@ async fn special_quote(headers: HeaderMap, ConnectInfo(addr): ConnectInfo<Socket
     fingerprint.hash(&mut hasher);
     let hash = hasher.finish();
 
-    let mut idx = (hash % lines.len() as u64) as usize;
-    let mut recent = RECENT_QUOTES.lock().unwrap();
-
-    let start_idx = idx;
-    while recent.contains(&idx) {
-        idx = (idx + 1) % lines.len();
-
-        if idx == start_idx {
-            break;
-        }
-    }
-
-    recent.push_back(idx);
-    if recent.len() > 10 {
-        recent.pop_front();
-    }
+    let idx = (hash % lines.len() as u64) as usize;
+    // let mut recent = RECENT_QUOTES.lock().unwrap();
+    //
+    // let start_idx = idx;
+    // while recent.contains(&idx) {
+    //     idx = (idx + 1) % lines.len();
+    //
+    //     if idx == start_idx {
+    //         break;
+    //     }
+    // }
+    //
+    // recent.push_back(idx);
+    // if recent.len() > 10 {
+    //     recent.pop_front();
+    // }
 
     let quote = lines[idx];
 
