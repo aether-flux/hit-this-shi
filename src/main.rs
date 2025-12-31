@@ -1,9 +1,8 @@
 use std::{hash::{DefaultHasher, Hash, Hasher}, net::SocketAddr};
 
-use axum::{extract::ConnectInfo, http::{HeaderMap, StatusCode}, response::IntoResponse, routing::get, Router, ServiceExt};
+use axum::{extract::ConnectInfo, http::{HeaderMap}, response::{Html, IntoResponse}, routing::get, Router};
 
 async fn special_quote(headers: HeaderMap, ConnectInfo(addr): ConnectInfo<SocketAddr>) -> impl IntoResponse {
-    // collection of lines
     let lines: Vec<&'static str> = vec![
         "You are stuck with this message. Refreshing ain't gonna help you, lil bro.",
         "This message has been deleted.",
@@ -28,7 +27,6 @@ async fn special_quote(headers: HeaderMap, ConnectInfo(addr): ConnectInfo<Socket
         "Nothing important was supposed to happen here. Go back now.",
         "There is no deep meaning. This is all there is.",
         "I just wanna tell you one thing, so sit down and brace yourself:\n\"Skill issue\"\n\nHappy new year btw",
-        "This message was assigned to you by Rust 🦀 at runtime. You can not go against its flow.",
         "You have reached the wrong place at the right time.",
         "You have reached the right place at the wrong time.",
         "If this annoyed you even a little, then it's working as intended.",
@@ -37,40 +35,89 @@ async fn special_quote(headers: HeaderMap, ConnectInfo(addr): ConnectInfo<Socket
         "Drink water.",
     ];
 
-    // extract IP
     let ip = addr.ip().to_string();
-
-    // extract user-agent
     let ua = headers.get("user-agent").and_then(|v| v.to_str().ok()).unwrap_or("unknown");
-
-    // build fingerprint
     let fingerprint = format!("{} {}", ip, ua);
 
-    // hash fingerprint
     let mut hasher = DefaultHasher::new();
     fingerprint.hash(&mut hasher);
     let hash = hasher.finish();
 
-    // pick response
     let idx = (hash % lines.len() as u64) as usize;
-    let response = format!("{}\n", lines[idx]);
+    let quote = lines[idx];
 
-    // return plain text
-    (
-        StatusCode::OK,
-        [("Content-Type", "text/plain; charset=utf-8")],
-        response,
-    )
+    let html = format!(r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Message</title>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
 
-    // "Hello, world!"
+        body {{
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #ffffff;
+            color: #000000;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 20px;
+            line-height: 1.6;
+        }}
+
+        .container {{
+            max-width: 600px;
+            width: 100%;
+        }}
+
+        h1 {{
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 40px;
+            color: #666;
+        }}
+
+        .quote {{
+            font-size: 24px;
+            font-weight: 400;
+            line-height: 1.5;
+            margin-bottom: 60px;
+            white-space: pre-wrap;
+        }}
+
+        .footer {{
+            font-size: 13px;
+            color: #999;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }}
+
+        @media (max-width: 600px) {{
+            .quote {{
+                font-size: 20px;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Your Personalized (Personal) Message</h1>
+        <div class="quote">{}</div>
+        <div class="footer">This message is very (I repeat VERY) unique to you</div>
+    </div>
+</body>
+</html>"#, quote);
+
+    Html(html)
 }
-
-// #[shuttle_runtime::main]
-// async fn main() -> shuttle_axum::ShuttleAxum {
-//     let router = Router::new().route("/", get(special_quote));
-//
-//     Ok(router.into())
-// }
 
 #[tokio::main]
 async fn main() {
@@ -79,13 +126,6 @@ async fn main() {
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     println!("Listening on {}", addr);
-
-    // axum::Server::bind(&addr)
-    //     .serve(app.into_make_service_with_connect_info::<SocketAddr>())
-    //     .await
-    //     .unwrap();
-
-    // let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
 
     axum::serve(
         listener,
